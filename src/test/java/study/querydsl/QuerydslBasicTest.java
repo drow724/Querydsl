@@ -13,7 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 
 import study.querydsl.entity.Member;
-import study.querydsl.entity.QMember;
+import static study.querydsl.entity.QMember.*;
 import study.querydsl.entity.Team;
 
 @SpringBootTest
@@ -26,6 +26,11 @@ public class QuerydslBasicTest {
 	//멀티 쓰레드 환경에서 문제 없이 트랜잭션에 바인딩 되도록 설계되어 있다.
 	//동시성 문제 X
 	JPAQueryFactory queryFactory;
+	
+	@BeforeEach
+	public void init() {
+	    queryFactory = new JPAQueryFactory(em);
+	}
 	
 	@BeforeEach
 	public void before() {
@@ -55,12 +60,15 @@ public class QuerydslBasicTest {
 	@Test
 	public void startQuerydsl() {
 		//JPAQueryFactory queryFactory = new JPAQueryFactory(em);
-		QMember m = new QMember("m");
+		
+		//QMember m = new QMember("m");
+		
+		//QMember m = QMember.member;
 		
 		Member findMember = queryFactory
-							.select(m)
-							.from(m)
-							.where(m.username.eq("member1")) //파라미터 바인딩 처리
+							.select(member)
+							.from(member)
+							.where(member.username.eq("member1")) //파라미터 바인딩 처리
 							.fetchOne();
 		
 		assertThat(findMember.getUsername()).isEqualTo("member1");
