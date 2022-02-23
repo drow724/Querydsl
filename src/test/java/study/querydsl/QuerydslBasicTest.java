@@ -23,15 +23,15 @@ public class QuerydslBasicTest {
 	@PersistenceContext
 	EntityManager em;
 
-	//멀티 쓰레드 환경에서 문제 없이 트랜잭션에 바인딩 되도록 설계되어 있다.
-	//동시성 문제 X
+	// 멀티 쓰레드 환경에서 문제 없이 트랜잭션에 바인딩 되도록 설계되어 있다.
+	// 동시성 문제 X
 	JPAQueryFactory queryFactory;
-	
+
 	@BeforeEach
 	public void init() {
-	    queryFactory = new JPAQueryFactory(em);
+		queryFactory = new JPAQueryFactory(em);
 	}
-	
+
 	@BeforeEach
 	public void before() {
 		Team teamA = new Team("teamA");
@@ -59,18 +59,29 @@ public class QuerydslBasicTest {
 
 	@Test
 	public void startQuerydsl() {
-		//JPAQueryFactory queryFactory = new JPAQueryFactory(em);
-		
-		//QMember m = new QMember("m");
-		
-		//QMember m = QMember.member;
-		
-		Member findMember = queryFactory
-							.select(member)
-							.from(member)
-							.where(member.username.eq("member1")) //파라미터 바인딩 처리
-							.fetchOne();
-		
+		// JPAQueryFactory queryFactory = new JPAQueryFactory(em);
+
+		// QMember m = new QMember("m");
+
+		// QMember m = QMember.member;
+
+		Member findMember = queryFactory.select(member).from(member).where(member.username.eq("member1")) // 파라미터 바인딩 처리
+				.fetchOne();
+
+		assertThat(findMember.getUsername()).isEqualTo("member1");
+	}
+
+	@Test
+	public void search() {
+		Member findMember = queryFactory.selectFrom(member).where(member.username.eq("member1").and(member.age.eq(10)))
+				.fetchOne();
+		assertThat(findMember.getUsername()).isEqualTo("member1");
+	}
+
+	@Test
+	public void searchAndParam() {
+		Member findMember = queryFactory.selectFrom(member).where(member.username.eq("member1"), member.age.eq(10))
+				.fetchOne();
 		assertThat(findMember.getUsername()).isEqualTo("member1");
 	}
 }
