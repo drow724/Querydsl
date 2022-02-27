@@ -1,9 +1,9 @@
 package study.querydsl;
 
+import static com.querydsl.jpa.JPAExpressions.select;
 import static org.assertj.core.api.Assertions.assertThat;
 import static study.querydsl.entity.QMember.member;
 import static study.querydsl.entity.QTeam.team;
-import static com.querydsl.jpa.JPAExpressions.select;
 
 import java.util.List;
 
@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.querydsl.core.QueryResults;
 import com.querydsl.core.Tuple;
+import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 
@@ -298,12 +299,30 @@ public class QuerydslBasicTest {
 
 		QMember memberSub = new QMember("memberSub");
 
-		List<Member> result = queryFactory.selectFrom(member)
-				.where(member.age.eq(select(memberSub.age.max()).from(memberSub))).fetch();
-		
-//		for (Tuple tuple : fetch) {
-//			System.out.println("username = " + tuple.get(member.username));
-//			System.out.println("age = " + tuple.get(JPAExpressions.select(memberSub.age.avg()).from(memberSub)));
-//		}
+		List<Tuple> result = queryFactory.select(member.username, select(memberSub.age.avg()).from(memberSub))
+				.from(member).fetch();
+
+		for (Tuple tuple : result) {
+			System.out.println("username = " + tuple.get(member.username));
+			System.out.println("age = " + tuple.get(select(memberSub.age.avg()).from(memberSub)));
+		}
+	}
+
+	@Test
+	public void basicCase() throws Exception {
+		List<String> result = queryFactory.select(member.age.when(10).then("열살").when(20).then("스무살").otherwise("기타"))
+				.from(member).fetch();
+		for (String s : result) {
+			System.out.println("s = " + s);
+		}
+	}
+
+	@Test
+	public void complexCase() throws Exception {
+		List<String> result = queryFactory.select(new CaseBuilder().when(member.age.between(0, 20)).then("0~20살")
+				.when(member.age.between(21, 30)).then("21~30살").otherwise("기타")).from(member).fetch();
+		for (String s : result) {
+			System.out.println("s = " + s);
+		}
 	}
 }
