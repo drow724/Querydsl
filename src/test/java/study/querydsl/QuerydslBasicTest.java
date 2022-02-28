@@ -27,6 +27,7 @@ import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 
 import study.querydsl.dto.MemberDto;
+import study.querydsl.dto.QMemberDto;
 import study.querydsl.dto.UserDto;
 import study.querydsl.entity.Member;
 import study.querydsl.entity.QMember;
@@ -416,6 +417,14 @@ public class QuerydslBasicTest {
 	public void findDtoByConstructor() throws Exception {
 		List<MemberDto> result = queryFactory
 				.select(Projections.constructor(MemberDto.class, member.username, member.age)).from(member).fetch();
+		for (MemberDto memberDto : result) {
+			System.out.println("memberDto = " + memberDto);
+		}
+	}
+
+	@Test
+	public void findDtoByQueryProjection() throws Exception {
+		List<MemberDto> result = queryFactory.select(new QMemberDto(member.username, member.age)).from(member).fetch();
 		for (MemberDto memberDto : result) {
 			System.out.println("memberDto = " + memberDto);
 		}
