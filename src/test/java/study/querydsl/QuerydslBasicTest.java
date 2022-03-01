@@ -15,6 +15,7 @@ import javax.persistence.PersistenceUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.annotation.Commit;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.querydsl.core.BooleanBuilder;
@@ -460,7 +461,7 @@ public class QuerydslBasicTest {
 	}
 
 	private List<Member> searchMember2(String usernameCond, Integer ageCond) {
-		return queryFactory.selectFrom(member).where(allEq(usernameCond,ageCond)).fetch();
+		return queryFactory.selectFrom(member).where(allEq(usernameCond, ageCond)).fetch();
 	}
 
 	private BooleanExpression usernameEq(String usernameCond) {
@@ -471,9 +472,51 @@ public class QuerydslBasicTest {
 		return ageCond != null ? member.age.eq(ageCond) : null;
 	}
 
-	//광고 상태 isValid, 날짜가 IN: isServiceable
-	
+	// 광고 상태 isValid, 날짜가 IN: isServiceable
+
 	private BooleanExpression allEq(String usernameCond, Integer ageCond) {
 		return usernameEq(usernameCond).and(ageEq(ageCond));
+	}
+
+	@Test
+	public void bulkUpdate() {
+
+		// member1 = 10 -> DB member1
+		// member2 = 20 -> DB member2
+		// member3 = 30 -> DB member3
+		// member4 = 40 -> DB member4
+		long count = queryFactory.update(member).set(member.username, "비회원").where(member.age.lt(28)).execute();
+
+		// member1 = 10 -> DB 비회원
+		// member2 = 20 -> DB 비회원
+		// member3 = 30 -> DB member3
+		// member4 = 40 -> DB member4
+		// 영속성 컨텍스트를 무시하고 update -> DB와 영속성 컨텍스트와 내용이 맞지 않음
+
+		// 영속성 컨텍스트가 항상 우선순위를 가짐 -> REPEATABLE READ
+		// List<Member> result = queryFactory.selectFrom(member).fetch();
+		//
+		// for(Member member1 : result) {
+		// System.out.println("member1 = " + member1);
+		// }
+
+		em.flush();
+		em.clear();
+
+		List<Member> result = queryFactory.selectFrom(member).fetch();
+
+		for (Member member1 : result) {
+			System.out.println("member1 = " + member1);
+		}
+	}
+
+	@Test
+	public void bulkAdd() {
+		long count = queryFactory.update(member).set(member.age, member.age.add(1)).execute();
+	}
+
+	@Test
+	public void bulkDelete() {
+		long count = queryFactory.delete(member).where(member.age.gt(18)).execute();
 	}
 }
