@@ -11,10 +11,12 @@ import javax.persistence.EntityManager;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.support.QuerydslRepositorySupport;
 import org.springframework.data.repository.support.PageableExecutionUtils;
 
 import com.querydsl.core.QueryResults;
 import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.jpa.JPQLQuery;
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 
@@ -23,17 +25,30 @@ import study.querydsl.dto.MemberTeamDto;
 import study.querydsl.dto.QMemberTeamDto;
 import study.querydsl.entity.Member;
 
-public class MemberRepositoryImpl implements MemberRepositoryCustom {
+public class MemberRepositoryImpl extends QuerydslRepositorySupport implements MemberRepositoryCustom {
 
 	private final JPAQueryFactory queryFactory;
+//
+//	public MemberRepositoryImpl(EntityManager em) {
+//		this.queryFactory = new JPAQueryFactory(em);
+//	}
 
 	public MemberRepositoryImpl(EntityManager em) {
+		super(Member.class);
 		this.queryFactory = new JPAQueryFactory(em);
 	}
 
 	@Override
 	// 회원명, 팀명, 나이(ageGoe, ageLoe)
 	public List<MemberTeamDto> search(MemberSearchCondition condition) {
+
+		EntityManager entityManager = getEntityManager();
+
+		List<MemberTeamDto> result = from(member).leftJoin(member.team, team)
+				.where(usernameEq(condition.getUsername()), teamNameEq(condition.getTeamName()),
+						ageGoe(condition.getAgeGoe()), ageLoe(condition.getAgeLoe()))
+				.select(new QMemberTeamDto(member.id, member.username, member.age, team.id, team.name)).fetch();
+
 		return queryFactory.select(new QMemberTeamDto(member.id, member.username, member.age, team.id, team.name))
 				.from(member).leftJoin(member.team, team)
 				.where(usernameEq(condition.getUsername()), teamNameEq(condition.getTeamName()),
@@ -62,6 +77,7 @@ public class MemberRepositoryImpl implements MemberRepositoryCustom {
 	 */
 	@Override
 	public Page<MemberTeamDto> searchPageSimple(MemberSearchCondition condition, Pageable pageable) {
+
 		QueryResults<MemberTeamDto> results = queryFactory
 				.select(new QMemberTeamDto(member.id, member.username, member.age, team.id, team.name)).from(member)
 				.leftJoin(member.team, team)
@@ -71,6 +87,23 @@ public class MemberRepositoryImpl implements MemberRepositoryCustom {
 		List<MemberTeamDto> content = results.getResults();
 		long total = results.getTotal();
 		return new PageImpl<>(content, pageable, total);
+	}
+
+	public Page<MemberTeamDto> searchPageSimple2(MemberSearchCondition condition, Pageable pageable) {
+
+		JPQLQuery<MemberTeamDto> jpaQuery = from(member).leftJoin(member.team, team)
+				.select(new QMemberTeamDto(member.id, member.username, member.age, team.id, team.name));
+
+		//메소드 체인이 끊기는 단점이 있다.
+		JPQLQuery<MemberTeamDto> query = getQuerydsl().applyPagination(pageable, jpaQuery);
+		
+		List<MemberTeamDto> content = query.fetch();
+		
+		//List<MemberTeamDto> content = results.getResults();
+		
+		//long total = content.getTotal();
+		
+		return new PageImpl<>(content, pageable, 10);
 	}
 
 	/**
@@ -84,12 +117,12 @@ public class MemberRepositoryImpl implements MemberRepositoryCustom {
 				.where(usernameEq(condition.getUsername()), teamNameEq(condition.getTeamName()),
 						ageGoe(condition.getAgeGoe()), ageLoe(condition.getAgeLoe()))
 				.offset(pageable.getOffset()).limit(pageable.getPageSize()).fetch();
-		
-		JPAQuery<Member> countQuery = queryFactory.select(member).from(member).leftJoin(member.team, team)
-				.where(usernameEq(condition.getUsername()), teamNameEq(condition.getTeamName()),
-						ageGoe(condition.getAgeGoe()), ageLoe(condition.getAgeLoe()));
-		
+
+		JPAQuery<Member> countQuery = queryFactory.select(member).from(member).leftJoin(member.team, team).where(
+				usernameEq(condition.getUsername()), teamNameEq(condition.getTeamName()), ageGoe(condition.getAgeGoe()),
+				ageLoe(condition.getAgeLoe()));
+
 		return PageableExecutionUtils.getPage(content, pageable, countQuery::fetchCount);
-		//return new PageImpl<>(content, pageable, total);
+		// return new PageImpl<>(content, pageable, total);
 	}
 }
